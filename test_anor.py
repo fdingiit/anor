@@ -17,30 +17,7 @@ def multiple(a, b):
     return a * b
 
 
-def count_down(previous):
-    now = previous - 1
-    print '[count_down] %d...' % now if now != 0 else 'cyka blyat!!!!!!!!!!!!!!!!!'
-    return now
-
-
-def choice(array):
-    print 'select from '
-    print array
-    my_choice = array[int(raw_input()) - 1]
-    print 'great! you selected: %d' % my_choice
-    return array
-
-
-def pop(choices):
-    print 'select from '
-    print choices
-    my_choice = int(raw_input())
-    print 'great! you selected: %d' % my_choice
-    choices.discard(my_choice)
-    return choices
-
-
-class Test(TestCase):
+class TestAuto(TestCase):
     def test_math(self):
         anor = Anor(name='math')
 
@@ -52,6 +29,11 @@ class Test(TestCase):
         self.assertEqual(1 * 2 * 2 * 3, result)
 
     def test_count_down(self):
+        def count_down(previous):
+            now = previous - 1
+            print '[count_down] %d...' % now if now != 0 else 'cyka blyat!!!!!!!!!!!!!!!!!'
+            return now
+
         anor = Anor(name='count_down')
 
         for i in range(10, 0, -1):
@@ -62,17 +44,26 @@ class Test(TestCase):
         print result
         self.assertEqual(0, result)
 
-    def test_choice(self):
-        choices = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
+class TestManual(TestCase):
+    def test_choice(self):
+        choices = [1, 2, 3, 4, 5]
         anor = Anor()
 
         for i in range(5):
-            anor.next_job('make_choice', choice, kwargs={'array': choices})
+            anor.next_job_choice_from('make_choice', args=choices)
 
         anor.fire()
 
     def test_pop(self):
+        def pop(choices):
+            print 'select from '
+            print choices
+            my_choice = int(raw_input())
+            print 'great! you selected: %d' % my_choice
+            choices.discard(my_choice)
+            return choices
+
         choices = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 
         anor = Anor()
@@ -82,7 +73,12 @@ class Test(TestCase):
         for i in range(5):
             last_name = current_name
             current_name = 'pop_at_%d' % i
-            anor.next_job(current_name, pop, kwargs={'choices': choices if i == 0 else anor.result_of(last_name)})
+            anor.next_job(current_name,
+                          pop,
+                          kwargs={
+                              'choices':
+                                  choices if i == 0 else anor.result_of(last_name)
+                          })
 
         print anor.fire()
 
@@ -110,3 +106,14 @@ class Test(TestCase):
 
         print result
         self.assertEqual(3 * 2 * 2 * 3, result)
+
+    def test_default_choice(self):
+        def init_list():
+            return ['apple', 'banana', 'grape', 'orange']
+
+        anor = Anor(name='choice')
+
+        result = anor.next_job('init', init_list). \
+            next_job_choice_from('choice', args=anor.result_of('init')). \
+            fire()
+        print result
