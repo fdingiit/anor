@@ -100,12 +100,24 @@ class TestManual(TestCase):
         result = anor. \
             next_job('double', double, args=(3,)). \
             next_job('triple', triple, args=(2,)). \
-            next_job('multiple', multiple, args=(anor.result_of('double'), anor.result_of('triple')),
+            next_job('multiple', multiple, kwargs={'a': anor.result_of('double'), 'b': anor.result_of('triple')},
                      decide=True). \
             fire()
 
         print result
         self.assertEqual(3 * 2 * 2 * 3, result)
+
+    def test_math_decide(self):
+        anor = Anor(name='decide')
+
+        result = anor.next_job('double', double, args=(1,)). \
+            next_job('triple', triple, args=(2,)). \
+            next_job('glue', lambda x, y: {'a': x, 'b': y},
+                     args=[anor.result_of('double'), anor.result_of('triple')]). \
+            next_job('multiple', multiple, kwargs=anor.result_of('glue'), decide=True).fire()
+
+        print result
+        self.assertEqual(1 * 2 * 2 * 3, result)
 
     def test_default_choice(self):
         def init_list():

@@ -1,9 +1,13 @@
 #!/usr/bin/python2
 # coding=utf8
+import json
 
 
-class _StopSignal(object):
+class _UserStopSignal(object):
     pass
+
+    def __repr__(self):
+        return '[USER STOP]'
 
 
 class _Block(object):
@@ -33,14 +37,15 @@ class _Job(_Block):
         self._decide = decide
 
     def _default_decider(self):
-        print '[-default decider] job brief:', self
+        print '[-default decider] job brief:'
+        print self
         print '[-default decider] continue? [yes/no]'
         return True if raw_input() == 'yes' else False
 
     def do(self):
         try:
             if self._decide and not self._default_decider():
-                return _StopSignal()
+                return _UserStopSignal()
             return self._handler(*self._args, **self._kwargs)
         except Exception as e:
             raise e
@@ -65,17 +70,13 @@ class _Job(_Block):
         return self._contain_result
 
     def __repr__(self):
-        return '{name: %s, args: %s, kwargs: %s}' % (self.name, self.args,
-                                                     self.kwargs)
-
-
-_default_decider_name = 'default_decider'
-
-
-def _default_decider_handler(block):
-    print '[-default decider] next block:', block
-    print '[-default decider] continue? [yes/no]'
-    return True if raw_input() == 'yes' else False
+        return json.dumps(
+            {
+                'name': self.name,
+                'args': self.args,
+                'kwargs': self.kwargs
+            },
+            indent=4)
 
 
 _default_choicer_name = 'default_choicer'
@@ -87,6 +88,10 @@ def _default_choicer_handler(*info):
     for i in range(len(info)):
         print i + 1, '|', info[i]
     print '-------------------------------------------------------'
+
+    if len(info) == 0:
+        print 'You have no choice...'
+        return None
 
     while True:
         print 'Please choice by index: [1-%d]' % len(info)
@@ -165,18 +170,35 @@ class Anor(object):
 
     def _prepare_args(self, job):
         if job.contain_result():
+            # args is a result, result is a list
+            # eg:
+            # anor.next_job('example', example, args=anor.result_of('another'))
             if isinstance(job.args, _ResultName):
-                # result must be an array
                 if isinstance(self._job_results[job.args.name], list):
-                    job.args = [a for a in self._job_results[job.args.name]]
-            if isinstance(job.args, list) or \
+                    job.args = self._job_results[job.args.name]
+
+            # kwargs is a result, result is a dict
+            # eg:
+            # anor.next_job('example', example, kwargs=anor.result_of('another'))
+            elif isinstance(job.kwargs, _ResultName):
+                if isinstance(self._job_results[job.kwargs.name], dict):
+                    job.kwargs = self._job_results[job.kwargs.name]
+
+            # args is a list, which may contain result
+            # eg:
+            # anor.next_job('example', example, args=[1, 2, anor.result_of('another')])
+            elif isinstance(job.args, list) or \
                     isinstance(job.args, tuple) or \
                     isinstance(job.args, set) and len(job.args):
                 job.args = [
                     self._job_results[a.name]
                     if isinstance(a, _ResultName) else a for a in job.args
                 ]
-            if isinstance(job.kwargs, dict) and len(job.kwargs):
+
+            # kwargs is a dict, which may contain result
+            # eg:
+            # anor.next_job('example', example, kwargs={'a': 1, 'b': 2, 'c': anor.result_of('another')])
+            elif isinstance(job.kwargs, dict) and len(job.kwargs):
                 kwargs_copy = dict()
                 for (k, v) in job.kwargs.items():
                     if isinstance(v, _ResultName):
@@ -199,9 +221,8 @@ class Anor(object):
                 last_result = block.do()
                 self._job_results[block.name] = last_result
 
-                if isinstance(last_result, _StopSignal):
-                    print 'stop'
-                    return
+                if isinstance(last_result, _UserStopSignal):
+                    return _UserStopSignal()
 
                 print '========================== [%d/%d] [end] ==========================' % (
                     current_job_index, self._job_cnt)
