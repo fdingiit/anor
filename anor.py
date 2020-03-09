@@ -94,12 +94,29 @@ def _default_choicer_handler(*info):
         return None
 
     while True:
-        print 'Please choice by index: [1-%d]' % len(info)
-        choice = int(raw_input())
-        if 1 <= choice <= len(info):
-            print 'Your choice is:', choice
-            print info[choice - 1]
-            return info[choice - 1]
+        print 'Please make choice by index: [1-%d] ' % len(info)
+        print '(split by comma \',\' if more than one, \'all\' for choice all of them)'
+        inputs = raw_input()
+        if inputs == 'all':
+            return info
+
+        choices = [int(s) for s in inputs.split(',')]
+
+        # check out of index error
+        for choice in choices:
+            try:
+                if choice <= 0:
+                    raise IndexError
+                _ = info[choice - 1]
+            except IndexError:
+                print '[!ERR] Out of index: %d' % choice
+                return None
+
+        print 'Your choices are:'
+        elements = [info[choice - 1] for choice in choices]
+        for ele in elements:
+            print ele
+        return [info[choice - 1] for choice in choices]
 
 
 class _ResultName(object):
