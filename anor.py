@@ -115,7 +115,7 @@ _default_choicer_name = 'default_choicer'
 
 
 def _default_choicer_handler(candidate, prompt):
-    print 'Your choices:' if prompt is None else prompt
+    print prompt or 'Your choices:'
     print '-------------------------------------------------------'
     for i in range(len(candidate)):
         print i + 1, '|', candidate[i]
@@ -126,32 +126,31 @@ def _default_choicer_handler(candidate, prompt):
         return None
 
     while True:
-        print 'Please make choice by index: [1-%d] ' % len(candidate)
-        print '(split by comma \',\' if more than one, \'all\' for choice all of them)'
-        inputs = raw_input()
-        if inputs == 'all':
-            return candidate
+        try:
+            print 'Please make choice by index: [1-%d] ' % len(candidate)
+            print '(split by comma \',\' if more than one, \'all\' for choice all of them)'
+            inputs = raw_input()
+            if inputs == 'all':
+                return candidate
 
-        choices = [int(s) for s in inputs.split(',')]
+            choices = [int(s) for s in inputs.split(',')]
 
-        # check out of index error
-        for choice in choices:
-            try:
+            # check out of index error
+            for choice in choices:
                 if choice <= 0:
                     raise IndexError
                 _ = candidate[choice - 1]
-            except IndexError:
-                print '[!ERR] Out of index: %d' % choice
-                return None
 
-        print 'Your choices are:'
-        elements = [candidate[choice - 1] for choice in choices]
-        for ele in elements:
-            print ele
-        return [candidate[choice - 1] for choice in choices]
+            print 'Your choices are:'
+            elements = [candidate[choice - 1] for choice in choices]
+            for ele in elements:
+                print ele
+            return [candidate[choice - 1] for choice in choices]
+        except Exception as e:
+            print '[ERR]', e
 
 
-class _ResultName(object):
+class _Result(object):
     """
     Place holder for result of a job
     """
@@ -196,7 +195,7 @@ class Anor(object):
         @param name: job name
         @return: place holder for specific job
         """
-        return _ResultName(name)
+        return _Result(name)
 
     @staticmethod
     def _args_contains_results(args=None, kwargs=None):
@@ -207,15 +206,15 @@ class Anor(object):
         @param kwargs: kwargs which to check
         @return: True if there is else False
         """
-        if isinstance(args, _ResultName) or isinstance(kwargs, _ResultName):
+        if isinstance(args, _Result) or isinstance(kwargs, _Result):
             return True
         if args is not None:
             for a in args:
-                if isinstance(a, _ResultName):
+                if isinstance(a, _Result):
                     return True
         if kwargs is not None:
             for (k, v) in kwargs.iteritems():
-                if isinstance(v, _ResultName):
+                if isinstance(v, _Result):
                     return True
         return False
 
@@ -248,7 +247,7 @@ class Anor(object):
         @param name: job name
         @param candidate: bloody lucky candidate, should be a list, set or tuple
         @param confirm: should be confirmed before starting?
-        @param prompt: message before choosing
+        @param prompt: message shown to user before choosing
         @return: Anor with the choice job
         """
         contain_result = self._args_contains_results(candidate)
@@ -264,20 +263,20 @@ class Anor(object):
         self._job_cnt += 1
         return self
 
-    def _prepare_args(self, job):
+    def _cook_args(self, job):
         """
-        Cook the args which current job needs
+        Cook raw args/kwargs which may contain result placeholder to prepared ready-to-use values
 
         @param job: job which need to eat args
         @return: nothing indeed
         """
         if job.contain_result():
-            # args is a result, result is a list
+            # args is a result, which is a list
             # eg:
             # anor.next_job('example', example, args=anor.result_of('another'))
-            if isinstance(job.args, _ResultName):
-                if isinstance(self._job_results[job.args.name], list):
-                    job.args = self._job_results[job.args.name]
+            if isinstance(job.args, _Result) and isinstance(
+                    self._job_results[job.args.name], list):
+                job.args = self._job_results[job.args.name]
             # args is a list, which may contain result
             # eg:
             # anor.next_job('example', example, args=[1, 2, anor.result_of('another')])
@@ -285,27 +284,25 @@ class Anor(object):
                     isinstance(job.args, tuple) or \
                     isinstance(job.args, set) and len(job.args):
                 job.args = [
-                    self._job_results[a.name]
-                    if isinstance(a, _ResultName) else a for a in job.args
+                    self._job_results[a.name] if isinstance(a, _Result) else a
+                    for a in job.args
                 ]
 
-            # kwargs is a result, result is a dict
+            # kwargs is a result, which is a dict
             # eg:
             # anor.next_job('example', example, kwargs=anor.result_of('another'))
-            if isinstance(job.kwargs, _ResultName):
-                if isinstance(self._job_results[job.kwargs.name], dict):
-                    job.kwargs = self._job_results[job.kwargs.name]
+            if isinstance(job.kwargs, _Result) and isinstance(
+                    self._job_results[job.kwargs.name], dict):
+                job.kwargs = self._job_results[job.kwargs.name]
             # kwargs is a dict, which may contain result
             # eg:
             # anor.next_job('example', example, kwargs={'a': 1, 'b': 2, 'c': anor.result_of('another')])
             elif isinstance(job.kwargs, dict) and len(job.kwargs):
-                kwargs_copy = dict()
+                kwargs_cooked = dict()
                 for (k, v) in job.kwargs.items():
-                    if isinstance(v, _ResultName):
-                        kwargs_copy[k] = self._job_results[v.name]
-                    else:
-                        kwargs_copy[k] = v
-                job.kwargs = kwargs_copy
+                    kwargs_cooked[k] = self._job_results[v.name] if isinstance(
+                        v, _Result) else v
+                job.kwargs = kwargs_cooked
 
     def fire(self):
         """
@@ -324,7 +321,7 @@ class Anor(object):
                 print '========================== [%d/%d] [%s] ==========================' % (
                     current_job_index, self._job_cnt, block.name)
 
-                self._prepare_args(block)
+                self._cook_args(block)
                 last_result = block.do()
                 self._job_results[block.name] = last_result
 
