@@ -18,7 +18,7 @@ def multiple(a, b):
 
 
 class TestAuto(TestCase):
-    def test_math(self):
+    def test_fire(self):
         anor = Anor(name='math')
 
         result = anor.next_job('double', double, args=(1,)). \
@@ -28,7 +28,7 @@ class TestAuto(TestCase):
         print result
         self.assertEqual(1 * 2 * 2 * 3, result)
 
-    def test_count_down(self):
+    def test_yet_another_fire(self):
         def count_down(previous):
             now = previous - 1
             print '[count_down] %d...' % now if now != 0 else 'cyka blyat!!!!!!!!!!!!!!!!!'
@@ -38,31 +38,55 @@ class TestAuto(TestCase):
 
         for i in range(10, 0, -1):
             name = 'count_down_at_%d' % i
-            anor.next_job(name, count_down, args=(i,))
+            anor.next_job(name, count_down, args=(i, ))
 
         result = anor.fire()
         print result
         self.assertEqual(0, result)
 
+    def test_prepare_args(self):
+        anor = Anor(name='decide')
+
+        result = anor.next_job('double', double, args=(1,)). \
+            next_job('triple', triple, args=(2,)). \
+            next_job('glue', lambda x, y: {'a': x, 'b': y},
+                     args=[anor.result_of('double'), anor.result_of('triple')]). \
+            next_job('multiple', multiple, kwargs=anor.result_of('glue')).fire()
+
+        print result
+        self.assertEqual(1 * 2 * 2 * 3, result)
+
 
 class TestManual(TestCase):
-    def test_choice(self):
+    def test_choice_from_array(self):
         choices = [1, 2, 3, 4, 5]
         anor = Anor()
 
-        for i in range(5):
-            anor.next_job_choice_from('make_choice', args=choices)
+        anor.next_job_choice_from('make_choice',
+                                  candidate=choices,
+                                  prompt='Choice a number you like:')
 
-        anor.fire()
+        print anor.fire()
 
-    def test_pop(self):
-        def pop(choices):
+    def test_choice_from_result(self):
+        def init_list():
+            return ['apple', 'banana', 'grape', 'orange']
+
+        anor = Anor(name='choice')
+
+        result = anor.next_job('init', init_list). \
+            next_job_choice_from('choice', candidate=anor.result_of('init')). \
+            fire()
+        print result
+
+    def test_result_as_kwargs(self):
+        def pop(candidate):
             print 'select from '
-            print choices
+            print candidate
             my_choice = int(raw_input())
             print 'great! you selected: %d' % my_choice
-            choices.discard(my_choice)
-            return choices
+            candidate.discard(my_choice)
+            return candidate
 
         choices = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 
@@ -76,14 +100,14 @@ class TestManual(TestCase):
             anor.next_job(current_name,
                           pop,
                           kwargs={
-                              'choices':
-                                  choices if i == 0 else anor.result_of(last_name)
+                              'candidate':
+                              choices if i == 0 else anor.result_of(last_name)
                           })
 
         print anor.fire()
 
-    def test_always_decide(self):
-        anor = Anor(name='decide', always_decide=True)
+    def test_always_confirm(self):
+        anor = Anor(name='decide', always_confirm=True)
 
         result = anor. \
             next_job('double', double, args=(2,)). \
@@ -94,38 +118,15 @@ class TestManual(TestCase):
         print result
         self.assertEqual(2 * 2 * 2 * 3, result)
 
-    def test_specific_decide(self):
+    def test_specific_confirm(self):
         anor = Anor(name='specific')
 
         result = anor. \
             next_job('double', double, args=(3,)). \
             next_job('triple', triple, args=(2,)). \
             next_job('multiple', multiple, kwargs={'a': anor.result_of('double'), 'b': anor.result_of('triple')},
-                     decide=True). \
+                     confirm=True). \
             fire()
 
         print result
         self.assertEqual(3 * 2 * 2 * 3, result)
-
-    def test_math_decide(self):
-        anor = Anor(name='decide')
-
-        result = anor.next_job('double', double, args=(1,)). \
-            next_job('triple', triple, args=(2,)). \
-            next_job('glue', lambda x, y: {'a': x, 'b': y},
-                     args=[anor.result_of('double'), anor.result_of('triple')]). \
-            next_job('multiple', multiple, kwargs=anor.result_of('glue'), decide=True).fire()
-
-        print result
-        self.assertEqual(1 * 2 * 2 * 3, result)
-
-    def test_default_choice(self):
-        def init_list():
-            return ['apple', 'banana', 'grape', 'orange']
-
-        anor = Anor(name='choice')
-
-        result = anor.next_job('init', init_list). \
-            next_job_choice_from('choice', args=anor.result_of('init')). \
-            fire()
-        print result
