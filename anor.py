@@ -112,7 +112,7 @@ class _Job(_Block):
             indent=4)
 
 
-def _default_choicer_handler(candidate, prompt, max_cnt):
+def _default_choicer(candidate, prompt, max_cnt, auto=False):
     if len(candidate) == 0:
         print 'You have no choice...'
         return None
@@ -123,6 +123,18 @@ def _default_choicer_handler(candidate, prompt, max_cnt):
         print i + 1, '|', candidate[i]
     print '-------------------------------------------------------'
 
+    handler = _auto_choicer_handler if auto else _default_choicer_handler
+
+    result = handler(candidate, max_cnt)
+
+    print 'Your choices are:'
+    for ele in result:
+        print ele
+
+    return result
+
+
+def _default_choicer_handler(candidate, max_cnt):
     while True:
         try:
             print 'Please make choice by index: [1-%d] ' % len(candidate)
@@ -143,26 +155,12 @@ def _default_choicer_handler(candidate, prompt, max_cnt):
                 print 'Too many...'
                 raise RuntimeError
 
-            print 'Your choices are:'
-            elements = [candidate[choice - 1] for choice in choices]
-            for ele in elements:
-                print ele
-            return [candidate[choice - 1] for choice in choices]
+            return choices
         except Exception as e:
             print '[ERR]', e
 
 
-def _auto_choicer_handler(candidate, prompt, max_cnt):
-    if len(candidate) == 0:
-        print 'You have no choice...'
-        return None
-
-    print prompt or 'Randomly choose %d element(s) from:' % max_cnt
-    print '-------------------------------------------------------'
-    for i in range(len(candidate)):
-        print i + 1, '|', candidate[i]
-    print '-------------------------------------------------------'
-
+def _auto_choicer_handler(candidate, max_cnt):
     sample = candidate[:]
     random.shuffle(sample)
 
@@ -267,21 +265,21 @@ class Anor(object):
 
         @param name: job name
         @param candidate: bloody lucky candidate, should be a list, set or tuple
-        @param confirm: should be confirmed before starting?
         @param prompt: message shown to user before choosing
         @param auto: auto random choose?
         @param max_cnt: max chances to choose
+        @param confirm: should be confirmed before starting?
         @return: Anor with the choice job
         """
         contain_result = self._args_contains_results(candidate)
         self._blocks.append(
             _Job(name,
-                 _default_choicer_handler
-                 if not auto else _auto_choicer_handler,
+                 _default_choicer,
                  kwargs={
                      'candidate': candidate,
                      'prompt': prompt,
-                     'max_cnt': max_cnt
+                     'max_cnt': max_cnt,
+                     'auto': auto,
                  },
                  contain_result=contain_result,
                  confirm=self._always_confirm or confirm))
