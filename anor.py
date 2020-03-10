@@ -1,6 +1,7 @@
 #!/usr/bin/python2
 # coding=utf8
 import json
+import random
 
 
 class UserStopSignal(object):
@@ -111,19 +112,16 @@ class _Job(_Block):
             indent=4)
 
 
-_default_choicer_name = 'default_choicer'
+def _default_choicer_handler(candidate, prompt, max_cnt):
+    if len(candidate) == 0:
+        print 'You have no choice...'
+        return None
 
-
-def _default_choicer_handler(candidate, prompt):
     print prompt or 'Your choices:'
     print '-------------------------------------------------------'
     for i in range(len(candidate)):
         print i + 1, '|', candidate[i]
     print '-------------------------------------------------------'
-
-    if len(candidate) == 0:
-        print 'You have no choice...'
-        return None
 
     while True:
         try:
@@ -141,6 +139,10 @@ def _default_choicer_handler(candidate, prompt):
                     raise IndexError
                 _ = candidate[choice - 1]
 
+            if len(choices) > max_cnt:
+                print 'Too many...'
+                raise RuntimeError
+
             print 'Your choices are:'
             elements = [candidate[choice - 1] for choice in choices]
             for ele in elements:
@@ -148,6 +150,23 @@ def _default_choicer_handler(candidate, prompt):
             return [candidate[choice - 1] for choice in choices]
         except Exception as e:
             print '[ERR]', e
+
+
+def _auto_choicer_handler(candidate, prompt, max_cnt):
+    if len(candidate) == 0:
+        print 'You have no choice...'
+        return None
+
+    print prompt or 'Randomly choose %d element(s) from:' % max_cnt
+    print '-------------------------------------------------------'
+    for i in range(len(candidate)):
+        print i + 1, '|', candidate[i]
+    print '-------------------------------------------------------'
+
+    sample = candidate[:]
+    random.shuffle(sample)
+
+    return sample[:max_cnt]
 
 
 class _Result(object):
@@ -237,9 +256,11 @@ class Anor(object):
         return self
 
     def next_job_choice_from(self,
-                             name=_default_choicer_name,
+                             name='default_choicer',
                              candidate=None,
                              prompt=None,
+                             auto=False,
+                             max_cnt=2 ^ 32 - 1,
                              confirm=False):
         """
         A useful choice from job
@@ -248,15 +269,19 @@ class Anor(object):
         @param candidate: bloody lucky candidate, should be a list, set or tuple
         @param confirm: should be confirmed before starting?
         @param prompt: message shown to user before choosing
+        @param auto: auto random choose?
+        @param max_cnt: max chances to choose
         @return: Anor with the choice job
         """
         contain_result = self._args_contains_results(candidate)
         self._blocks.append(
             _Job(name,
-                 _default_choicer_handler,
+                 _default_choicer_handler
+                 if not auto else _auto_choicer_handler,
                  kwargs={
                      'candidate': candidate,
                      'prompt': prompt,
+                     'max_cnt': max_cnt
                  },
                  contain_result=contain_result,
                  confirm=self._always_confirm or confirm))

@@ -1,4 +1,6 @@
+import random
 from unittest import TestCase
+
 from anor import Anor
 
 
@@ -55,6 +57,32 @@ class TestAuto(TestCase):
 
         print result
         self.assertEqual(1 * 2 * 2 * 3, result)
+
+    def test_auto_choice(self):
+        choices = [1, 2, 3, 4, 5]
+        anor = Anor()
+
+        anor.next_job_choice_from('make_choice', candidate=choices, auto=True)
+
+        result = anor.fire()
+        print result
+
+        self.assertEqual(len(choices), len(result))
+
+    def test_auto_choice_max(self):
+        choices = [x for x in range(1, 400)]
+        anor = Anor()
+
+        max_cnt = random.randint(1, 400)
+        anor.next_job_choice_from('make_choice',
+                                  candidate=choices,
+                                  auto=True,
+                                  max_cnt=max_cnt)
+
+        result = anor.fire()
+        print result
+
+        self.assertEqual(max_cnt, len(result))
 
 
 class TestManual(TestCase):
