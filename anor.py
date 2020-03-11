@@ -129,7 +129,7 @@ def _default_choicer(candidate, prompt, max_cnt, auto, filter_func):
 
     print 'Your choices are:'
     for ele in result:
-        repr(ele).decode('unicode-escape')
+        print repr(ele).decode('unicode-escape')
 
     return result
 
@@ -137,8 +137,8 @@ def _default_choicer(candidate, prompt, max_cnt, auto, filter_func):
 def _default_choicer_handler(candidate, max_cnt, filter_func):
     while True:
         try:
-            print 'Please make choice by index: [1-%d] ' % len(candidate)
-            print '(split by comma \',\' if more than one, \'all\' for choice all of them)'
+            print 'Please make choice(s) by index: [1-%d] ' % len(candidate)
+            print '(split by comma \',\' if more than one, input \'all\' to choose all of them)'
             inputs = raw_input()
             if inputs == 'all':
                 return candidate
