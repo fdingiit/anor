@@ -112,7 +112,7 @@ class _Job(_Block):
             indent=4)
 
 
-def _default_choicer(candidate, prompt, max_cnt, auto=False):
+def _default_choicer(candidate, prompt, max_cnt, auto, filter_func):
     if len(candidate) == 0:
         print 'You have no choice...'
         return None
@@ -125,7 +125,7 @@ def _default_choicer(candidate, prompt, max_cnt, auto=False):
 
     handler = _auto_choicer_handler if auto else _default_choicer_handler
 
-    result = handler(candidate, max_cnt)
+    result = handler(candidate, max_cnt, filter_func)
 
     print 'Your choices are:'
     for ele in result:
@@ -134,7 +134,7 @@ def _default_choicer(candidate, prompt, max_cnt, auto=False):
     return result
 
 
-def _default_choicer_handler(candidate, max_cnt):
+def _default_choicer_handler(candidate, max_cnt, filter_func):
     while True:
         try:
             print 'Please make choice by index: [1-%d] ' % len(candidate)
@@ -143,25 +143,33 @@ def _default_choicer_handler(candidate, max_cnt):
             if inputs == 'all':
                 return candidate
 
-            choices = [int(s) for s in inputs.split(',')]
+            index = [int(s) for s in inputs.split(',')]
 
-            # check out of index error
-            for choice in choices:
-                if choice <= 0:
+            elements = list()
+            for i in index:
+                # check out of index error
+                if i <= 0:
                     raise IndexError
-                _ = candidate[choice - 1]
 
-            if len(choices) > max_cnt:
+                ele = candidate[i - 1]
+                if filter_func and filter_func(ele):
+                    print 'Contains element which cannot be picked:', ele
+                    raise RuntimeError
+
+                elements.append(ele)
+
+            if len(elements) > max_cnt:
                 print 'Too many...'
                 raise RuntimeError
 
-            return choices
+            return elements
         except Exception as e:
             print '[ERR]', e
 
 
-def _auto_choicer_handler(candidate, max_cnt):
-    sample = candidate[:]
+def _auto_choicer_handler(candidate, max_cnt, filter_func):
+    sample = candidate[:] if filter_func is None else filter(
+        filter_func, candidate[:])
     random.shuffle(sample)
 
     return sample[:max_cnt]
@@ -258,6 +266,7 @@ class Anor(object):
                              candidate=None,
                              prompt=None,
                              auto=False,
+                             filter_func=None,
                              max_cnt=2 ^ 32 - 1,
                              confirm=False):
         """
@@ -267,6 +276,7 @@ class Anor(object):
         @param candidate: bloody lucky candidate, should be a list, set or tuple
         @param prompt: message shown to user before choosing
         @param auto: auto random choose?
+        @param filter_func: filter function of choicer
         @param max_cnt: max chances to choose
         @param confirm: should be confirmed before starting?
         @return: Anor with the choice job
@@ -280,6 +290,7 @@ class Anor(object):
                      'prompt': prompt,
                      'max_cnt': max_cnt,
                      'auto': auto,
+                     'filter_func': filter_func,
                  },
                  contain_result=contain_result,
                  confirm=self._always_confirm or confirm))

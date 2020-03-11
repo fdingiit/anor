@@ -84,10 +84,27 @@ class TestAuto(TestCase):
 
         self.assertEqual(max_cnt, len(result))
 
+    def test_auto_choice_with_filter(self):
+        def fltr(n):
+            return False if n in [1, 3, 5] else True
+
+        choices = [1, 2, 3, 4, 5]
+        anor = Anor()
+
+        anor.next_job_choice_from('with_filter',
+                                  candidate=choices,
+                                  auto=True,
+                                  filter_func=fltr)
+
+        result = anor.fire()
+        print result
+
+        self.assertEqual(2, len(result))
+
 
 class TestManual(TestCase):
     def test_choice_from_array(self):
-        choices = [1, 2, 3, 4, 5]
+        choices = [5, 4, 3, 2, 1]
         anor = Anor()
 
         anor.next_job_choice_from('make_choice',
