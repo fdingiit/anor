@@ -1,5 +1,5 @@
 #!/usr/bin/python2
-# coding=utf8
+# encoding=utf8
 import json
 import random
 
@@ -120,7 +120,7 @@ def _default_choicer(candidate, prompt, max_cnt, auto=False):
     print prompt or 'Your choices:'
     print '-------------------------------------------------------'
     for i in range(len(candidate)):
-        print i + 1, '|', candidate[i]
+        print i + 1, '|', repr(candidate[i]).decode('unicode-escape')
     print '-------------------------------------------------------'
 
     handler = _auto_choicer_handler if auto else _default_choicer_handler
@@ -129,7 +129,7 @@ def _default_choicer(candidate, prompt, max_cnt, auto=False):
 
     print 'Your choices are:'
     for ele in result:
-        print ele
+        repr(ele).decode('unicode-escape')
 
     return result
 
