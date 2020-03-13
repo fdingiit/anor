@@ -152,7 +152,7 @@ def _default_choicer_handler(candidate, max_cnt, filter_func):
                     raise IndexError
 
                 ele = candidate[i - 1]
-                if filter_func and filter_func(ele):
+                if filter_func and not filter_func(ele):
                     print 'Contains element which cannot be picked:', ele
                     raise RuntimeError
 

@@ -4,6 +4,14 @@ from unittest import TestCase
 from anor import Anor
 
 
+class _TestError(Exception):
+    def __init__(self, msg):
+        self._msg = msg
+
+    def __repr__(self):
+        return self._msg
+
+
 def double(x):
     print 'doubling...'
     return 2 * x
@@ -101,6 +109,17 @@ class TestAuto(TestCase):
 
         self.assertEqual(2, len(result))
 
+    def test_raise_exception(self):
+        def exception():
+            raise _TestError('my exception')
+
+        anor = Anor()
+
+        try:
+            anor.next_job('raise', exception).fire()
+        except Exception as e:
+            print repr(e)
+
 
 class TestManual(TestCase):
     def test_choice_from_array(self):
@@ -175,3 +194,17 @@ class TestManual(TestCase):
 
         print result
         self.assertEqual(3 * 2 * 2 * 3, result)
+
+    def test_choice_with_filter(self):
+        def fltr(n):
+            return False if n in [1, 3, 5] else True
+
+        choices = [1, 2, 3, 4, 5]
+        anor = Anor()
+
+        anor.next_job_choice_from('with_filter',
+                                  candidate=choices,
+                                  filter_func=fltr)
+
+        result = anor.fire()
+        print result
